@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <title>E-mail Health Checker</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 2rem;
+    }
+    input {
+      padding: 0.5rem;
+      font-size: 1rem;
+    }
+    button {
+      padding: 0.5rem 1rem;
+      margin-left: 0.5rem;
+      font-size: 1rem;
+    }
+    pre {
+      background: #f4f4f4;
+      padding: 1rem;
+      margin-top: 1rem;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Tjek dit domænes e-mail-indstillinger</h1>
+  <input type="text" id="domainInput" placeholder="Indtast domæne f.eks. eksempel.dk">
+  <button onclick="checkDomain()">Tjek</button>
+
+  <pre id="output"></pre>
+
+  <script>
+    async function checkDomain() {
+      const domain = document.getElementById('domainInput').value.trim();
+      if (!domain) {
+        alert("Indtast venligst et domæne.");
+        return;
+      }
+
+      const res = await fetch(`http://localhost:3000/check?domain=${domain}`);
+      const data = await res.json();
+      document.getElementById('output').textContent = JSON.stringify(data, null, 2);
+    }
+  </script>
+</body>
+</html>

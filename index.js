@@ -1,52 +1,45 @@
 const express = require('express');
-const dns = require('dns');
+const dns = require('dns').promises;
+const cors = require('cors');
+
 const app = express();
-const port = 3000;
+const PORT = 3000;
 
-// Middleware til at håndtere JSON-body
-app.use(express.json());
+app.use(cors());
 
-// API-endpoint til at tjekke domænet
-app.post('/check-domain', (req, res) => {
-  const domain = req.body.domain;
+app.get('/check', async (req, res) => {
+  const domain = req.query.domain;
 
-  // Tjek om domænet findes i DNS
-  dns.resolveTxt(domain, (err, records) => {
-    if (err) {
-      return res.status(400).json({ message: 'Fejl ved opdatering af DNS-poster', valid: false });
-    }
+  if (!domain) return res.status(400).json({ error: 'Missing domain parameter' });
 
-    // Tjek SPF-posten
-    let spfValid = false;
-    let dkimValid = false;
-    let dmarcValid = false;
+  const results = {
+    spf: 'unknown',
+    dmarc: 'unknown',
+    dkim: 'manual check'
+  };
 
-    // Gennemgå TXT-posterne og tjek for SPF, DKIM og DMARC
-    records.forEach((record) => {
-      if (record[0].startsWith('v=spf1')) {
-        spfValid = true;
-      }
-      if (record[0].startsWith('v=DMARC1')) {
-        dmarcValid = true;
-      }
-      if (record[0].startsWith('v=DKIM1')) {
-        dkimValid = true;
-      }
-    });
+  try {
+    const txtRecords = await dns.resolveTxt(domain);
+    const flat = txtRecords.flat().join('');
+    results.spf = flat.includes('v=spf1') ? 'valid' : 'missing';
+  } catch {
+    results.spf = 'error';
+  }
 
-    // Returnér resultatet
-    if (spfValid && dkimValid && dmarcValid) {
-      return res.status(200).json({ message: 'Domænet er sundt!', valid: true });
-    } else {
-      return res.status(200).json({
-        message: 'Domænet har fejl i SPF, DKIM eller DMARC.',
-        valid: false,
-        errors: { spf: spfValid, dkim: dkimValid, dmarc: dmarcValid }
-      });
-    }
-  });
+  try {
+    const dmarcRecords = await dns.resolveTxt(`_dmarc.${domain}`);
+    const flat = dmarcRecords.flat().join('');
+    results.dmarc = flat.includes('v=DMARC1') ? 'valid' : 'missing';
+  } catch {
+    results.dmarc = 'error';
+  }
+
+  // DKIM kræver selector og er svær at tjekke uden ekstra info
+  res.json(results);
 });
 
-app.listen(port, () => {
-  console.log(`Server kører på http://localhost:${port}`);
+app.use(express.static('public'));
+
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
 });

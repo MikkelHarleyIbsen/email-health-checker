@@ -1,21 +1,210 @@
 <!DOCTYPE html>
-<html>
+<html lang="da">
 <head>
+  <meta charset="UTF-8">
   <title>E-mail Health Checker</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    input {
+      padding: 0.5rem;
+      font-size: 1rem;
+      margin-right: 0.5rem;
+    }
+    button {
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    #results {
+      margin-top: 2rem;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      margin-bottom: 0.5rem;
+    }
+    .guide-container {
+      margin-top: 1rem;
+      background-color: #f4f4f4;
+      padding: 1rem;
+      border-radius: 8px;
+      max-width: 600px;
+    }
+    .dropdown-content {
+      padding: 1rem;
+      background-color: #f9f9f9;
+      border-radius: 8px;
+      display: none;
+    }
+    .dropdown-content.open {
+      display: block;
+    }
+    .results-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 3rem;
+      margin-top: 2rem;
+    }
+    #scoreChart {
+      max-width: 250px;
+      max-height: 250px;
+    }
+    .score-box {
+      text-align: center;
+    }
+  </style>
 </head>
 <body>
   <h1>Tjek dit domænes e-mail-indstillinger</h1>
-  <input type="text" id="domainInput" placeholder="Indtast domæne">
-  <button onclick="checkDomain()">Tjek</button>
+  <div>
+    <input type="text" id="domainInput" placeholder="Indtast domæne">
+    <input type="text" id="selectorInput" placeholder="Indtast DKIM selector (valgfrit)">
+    <button onclick="checkDomain()">Tjek</button>  
+  </div>
 
-  <pre id="output"></pre>
+  <div id="results" class="results-container"></div>
+
+  <div class="guide-container">
+    <button onclick="toggleDropdown()">Problemer med at finde selector? Se guide her</button>
+    <div class="dropdown-content" id="dropdown-content">
+      <p><strong>Sådan finder du din DKIM-selector:</strong></p>
+      <ul>
+        <li><strong>One.com:</strong> Gå til din DNS-konfiguration, og find DKIM-opsætningen. Selector vil være noget som "one1" eller "one2" (f.eks. <code>one1._domainkey.ditdomæne.dk</code>).</li>
+        <li><strong>Simply:</strong> Din selector kan være <code>simplycom1</code>, <code>simplycom2</code> eller <code>unoeuro</code>. Find disse i din DNS-opsætning under DKIM CNAME-records.</li>
+      </ul>
+      <p>Selectoren er det, der står før <code>._domainkey</code> i DNS-opsætningen. Brug denne værdi som selector i inputfeltet.</p>
+    </div>
+  </div>
 
   <script>
+    let chart;
+
     async function checkDomain() {
-      const domain = document.getElementById('domainInput').value;
-      const res = await fetch(`http://localhost:3000/check?domain=${domain}`);
-      const data = await res.json();
-      document.getElementById('output').textContent = JSON.stringify(data, null, 2);
+      const domain = document.getElementById('domainInput').value.trim();
+      const selector = document.getElementById('selectorInput').value.trim();
+      const resultsDiv = document.getElementById('results');
+
+      if (!domain) {
+        resultsDiv.innerHTML = "<p style='color:red;'>Indtast et domæne først.</p>";
+        return;
+      }
+
+      resultsDiv.innerHTML = "Tjekker...";
+
+      try {
+        const res = await fetch(`/check?domain=${encodeURIComponent(domain)}&selector=${encodeURIComponent(selector)}`);
+        const data = await res.json();
+
+        if (data.error) {
+          resultsDiv.innerHTML = `<p style='color:red;'>Fejl: ${data.error}</p>`;
+          return;
+        }
+
+        const score = calculateScore(data);
+
+        resultsDiv.innerHTML = `
+          <div>
+            <h2>Resultater for <strong>${domain}</strong>:</h2>
+            <ul>
+              <li><strong>SPF:</strong> ${formatStatus(data.spf)}</li>
+              <li><strong>DMARC:</strong> ${formatStatus(data.dmarc)}</li>
+              <li><strong>DKIM:</strong> ${formatStatus(data.dkim)}</li>
+            </ul>
+            <p><strong>Samlet vurdering:</strong> ${score}%</p>
+            <p>${scoreMessage(score)}</p>
+          </div>
+          <div class="score-box">
+            <canvas id="scoreChart"></canvas>
+          </div>
+        `;
+
+        drawChart(score);
+      } catch (err) {
+        console.error(err);
+        resultsDiv.innerHTML = `<p style='color:red;'>Noget gik galt under tjekket.</p>`;
+      }
+    }
+
+    function calculateScore(data) {
+      let score = 0;
+      if (data.spf === 'valid') score += 33;
+      if (data.dmarc === 'valid') score += 33;
+      if (data.dkim === 'valid') score += 34;
+      return score;
+    }
+
+    function formatStatus(status) {
+      if (status === 'valid') return '✅ Gyldig';
+      if (status === 'missing') return '❌ Mangler';
+      if (status === 'error') return '⚠️ Fejl ved opslag';
+      return '❓ Ukendt';
+    }
+
+    function scoreMessage(score) {
+      if (score >= 80) return '✅ Din opsætning ser god ud!';
+      if (score >= 50) return '⚠️ Nogle indstillinger mangler eller bør optimeres.';
+      return '❌ Din opsætning har alvorlige fejl.';
+    }
+
+    function toggleDropdown() {
+      const dropdownContent = document.getElementById("dropdown-content");
+      dropdownContent.classList.toggle("open");
+    }
+
+    function drawChart(score) {
+      const ctx = document.getElementById('scoreChart').getContext('2d');
+
+      if (chart) chart.destroy();
+
+      let color = '#4CAF50';
+      if (score < 80) color = '#FFA726';
+      if (score < 50) color = '#EF5350';
+
+      const centerText = {
+        id: 'centerText',
+        beforeDraw(chart) {
+          const { width, height } = chart;
+          const ctx = chart.ctx;
+          ctx.restore();
+          const fontSize = (height / 5).toFixed(2);
+          ctx.font = `${fontSize}px Arial`;
+          ctx.textBaseline = 'middle';
+          ctx.textAlign = 'center';
+          ctx.fillStyle = '#333';
+          ctx.fillText(`${score}%`, width / 2, height / 2);
+          ctx.save();
+        }
+      };
+
+      chart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          datasets: [{
+            data: [score, 100 - score],
+            backgroundColor: [color, '#e0e0e0'],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          cutout: '75%',
+          plugins: {
+            tooltip: { enabled: false },
+            legend: { display: false },
+            title: { display: false }
+          }
+        },
+        plugins: [centerText]
+      });
     }
   </script>
 </body>

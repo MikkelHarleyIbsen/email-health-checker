@@ -9,15 +9,17 @@ app.use(cors());
 
 app.get('/check', async (req, res) => {
   const domain = req.query.domain;
+  const selector = req.query.selector;
 
   if (!domain) return res.status(400).json({ error: 'Missing domain parameter' });
 
   const results = {
     spf: 'unknown',
     dmarc: 'unknown',
-    dkim: 'manual check'
+    dkim: selector ? 'unknown' : 'manual check'
   };
 
+  // SPF
   try {
     const txtRecords = await dns.resolveTxt(domain);
     const flat = txtRecords.flat().join('');
@@ -26,6 +28,7 @@ app.get('/check', async (req, res) => {
     results.spf = 'error';
   }
 
+  // DMARC
   try {
     const dmarcRecords = await dns.resolveTxt(`_dmarc.${domain}`);
     const flat = dmarcRecords.flat().join('');
@@ -34,7 +37,18 @@ app.get('/check', async (req, res) => {
     results.dmarc = 'error';
   }
 
-  // DKIM kræver selector og er svær at tjekke uden ekstra info
+  // DKIM – kun hvis selector er angivet
+  if (selector) {
+    try {
+      const dkimDomain = `${selector}._domainkey.${domain}`;
+      const dkimRecords = await dns.resolveTxt(dkimDomain);
+      const flat = dkimRecords.flat().join('');
+      results.dkim = flat.includes('v=DKIM1') ? 'valid' : 'missing';
+    } catch {
+      results.dkim = 'error';
+    }
+  }
+
   res.json(results);
 });
 

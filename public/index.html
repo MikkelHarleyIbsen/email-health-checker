@@ -2,20 +2,118 @@
 <html lang="da">
 <head>
   <meta charset="UTF-8">
-  <title>E-mail Health Checker</title>
+  <title>Astro</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
-      padding: 2rem;
+      padding: 0;
+      margin: 0;
       display: flex;
       flex-direction: column;
+      min-height: 100vh;
+      background-color: #f4f4f4;
+      justify-content: center;
       align-items: center;
+    }
+    header {
+      background-color: #49413a;
+      color: white;
+      width: 100%;
+      padding: 1rem 0;
+      text-align: center;
+
+   .header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 2rem;
+  flex-wrap: wrap;
+}
+
+.logo img {
+  height: 50px;
+}
+
+.menu {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.menu a {
+  color: white;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.menu a:hover {
+  text-decoration: underline;
+}
+
+.burger {
+  display: none;
+  font-size: 1.8rem;
+  cursor: pointer;
+  color: white;
+}
+
+@media (max-width: 768px) {
+  .menu {
+    display: none;
+    flex-direction: column;
+    width: 100%;
+    background-color: #49413a;
+    padding: 1rem;
+  }
+
+  .menu.show {
+    display: flex;
+  }
+
+  .burger {
+    display: block;
+  }
+
+  .header-content {
+    flex-direction: row;
+  }
+}
+
+.header-text {
+  text-align: center;
+  margin-top: 1rem;
+  padding: 0 1rem;
+}
+
+
+    }
+    footer {
+      background-color: #49413a;
+      padding: 1rem 0;
+      text-align: center;
+      font-size: 0.9rem;
+      color: #f4f4f4;
+      width: 100%;
+      margin-top: auto;
+    }
+    .container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      padding: 2rem;
+      flex-grow: 1;
+      text-align: center;
+    }
+    .left-column {
+      flex: 1;
+      margin-bottom: 2rem;
     }
     input {
       padding: 0.5rem;
       font-size: 1rem;
       margin-right: 0.5rem;
+      margin-bottom: 1rem;
     }
     button {
       padding: 0.5rem 1rem;
@@ -24,17 +122,21 @@
     }
     #results {
       margin-top: 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
-    ul {
-      list-style: none;
-      padding: 0;
+    .score-box {
+      text-align: center;
+      margin-top: 2rem;
     }
-    li {
-      margin-bottom: 0.5rem;
+    #scoreChart {
+      max-width: 250px;
+      max-height: 250px;
     }
     .guide-container {
       margin-top: 1rem;
-      background-color: #f4f4f4;
+      background-color: #f9f9f9;
       padding: 1rem;
       border-radius: 8px;
       max-width: 600px;
@@ -48,46 +150,77 @@
     .dropdown-content.open {
       display: block;
     }
-    .results-container {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 3rem;
-      margin-top: 2rem;
-    }
-    #scoreChart {
-      max-width: 250px;
-      max-height: 250px;
-    }
-    .score-box {
-      text-align: center;
-    }
   </style>
 </head>
 <body>
-  <h1>Tjek dit domænes e-mail-indstillinger</h1>
-  <div>
-    <input type="text" id="domainInput" placeholder="Indtast domæne">
-    <input type="text" id="selectorInput" placeholder="Indtast DKIM selector (valgfrit)">
-    <button onclick="checkDomain()">Tjek</button>  
-  </div>
+  <header>
+    <div class="header-content">
+      <div class="logo">
+        <img src="https://via.placeholder.com/50" alt="Logo">
+      </div>
+      <nav class="menu" id="navMenu">
+        <a href="#">Home</a>
+        <a href="#">Om os</a>
+        <a href="#">Kontakt</a>
+        <a href="index.html">DNS OVERVÅGNING</a>
+        <a href="subject-tester.html">EMNELINJE CHECK</a>
+      </nav>
+      <div class="burger" onclick="toggleMenu()">
+        ☰
+      </div>
+    </div>
+    <div class="header-text">
+      <h1>E-mail Health Checker</h1>
+      <p>Tjek dit domænes DMARC, DKIM og SPF ved at indtaste dit domæne og din DKIM selector herunder:</p>
+    </div>
+  </header>
+  
+  
 
-  <div id="results" class="results-container"></div>
+  <div class="container">
+    <!-- Venstre kolonne (Funktion og guide) -->
+    <div class="left-column">
+      <input type="text" id="domainInput" placeholder="Indtast domæne">
+      <input type="text" id="selectorInput" placeholder="Indtast DKIM selector (valgfrit)">
+      <button onclick="checkDomain()">Tjek</button>
 
-  <div class="guide-container">
-    <button onclick="toggleDropdown()">Problemer med at finde selector? Se guide her</button>
-    <div class="dropdown-content" id="dropdown-content">
-      <p><strong>Sådan finder du din DKIM-selector:</strong></p>
-      <ul>
-        <li><strong>One.com:</strong> Gå til din DNS-konfiguration, og find DKIM-opsætningen. Selector vil være noget som "one1" eller "one2" (f.eks. <code>one1._domainkey.ditdomæne.dk</code>).</li>
-        <li><strong>Simply:</strong> Din selector kan være <code>simplycom1</code>, <code>simplycom2</code> eller <code>unoeuro</code>. Find disse i din DNS-opsætning under DKIM CNAME-records.</li>
-      </ul>
-      <p>Selectoren er det, der står før <code>._domainkey</code> i DNS-opsætningen. Brug denne værdi som selector i inputfeltet.</p>
+      <div id="results"></div>
+
+      <div class="guide-container">
+        <button onclick="toggleDropdown()">Problemer med at finde selector? Se guide her</button>
+        <div class="dropdown-content" id="dropdown-content">
+          <p><strong>Sådan finder du din DKIM-selector:</strong></p>
+          <ul>
+            <li><strong>One.com:</strong> Gå til din DNS-konfiguration, og find DKIM-opsætningen. Selector vil være noget som "one1" eller "one2" (f.eks. <code>one1._domainkey.ditdomæne.dk</code>).</li>
+            <li><strong>Simply:</strong> Din selector kan være <code>simplycom1</code>, <code>simplycom2</code> eller <code>unoeuro</code>. Find disse i din DNS-opsætning under DKIM CNAME-records.</li>
+          </ul>
+          <p>Selectoren er det, der står før <code>._domainkey</code> i DNS-opsætningen. Brug denne værdi som selector i inputfeltet.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Højre kolonne (Cirkeldiagram) -->
+    <div class="score-box">
+      <canvas id="scoreChart"></canvas>
     </div>
   </div>
 
+  <footer>
+    <p>&copy; 2025 E-mail Health Checker. Alle rettigheder forbeholdes.</p>
+  </footer>
+  
+  <script>
+    function toggleMenu() {
+      const menu = document.getElementById('navMenu');
+      menu.classList.toggle('show');
+    }
+  </script>
+  
   <script>
     let chart;
+
+    // Initialiserer cirkeldiagrammet med 0% hvis der ikke er input
+    drawChart(0);
 
     async function checkDomain() {
       const domain = document.getElementById('domainInput').value.trim();
@@ -96,6 +229,7 @@
 
       if (!domain) {
         resultsDiv.innerHTML = "<p style='color:red;'>Indtast et domæne først.</p>";
+        drawChart(0);  // Hvis der ikke er input, vis 0% diagram
         return;
       }
 
@@ -107,6 +241,7 @@
 
         if (data.error) {
           resultsDiv.innerHTML = `<p style='color:red;'>Fejl: ${data.error}</p>`;
+          drawChart(0);  // Hvis der opstår en fejl, vis 0% diagram
           return;
         }
 
@@ -123,15 +258,13 @@
             <p><strong>Samlet vurdering:</strong> ${score}%</p>
             <p>${scoreMessage(score)}</p>
           </div>
-          <div class="score-box">
-            <canvas id="scoreChart"></canvas>
-          </div>
         `;
 
         drawChart(score);
       } catch (err) {
         console.error(err);
         resultsDiv.innerHTML = `<p style='color:red;'>Noget gik galt under tjekket.</p>`;
+        drawChart(0);  // Hvis der opstår en fejl, vis 0% diagram
       }
     }
 
@@ -161,51 +294,61 @@
       dropdownContent.classList.toggle("open");
     }
 
+    // Funktionen til at tegne cirkeldiagrammet
     function drawChart(score) {
-      const ctx = document.getElementById('scoreChart').getContext('2d');
+  const ctx = document.getElementById('scoreChart').getContext('2d');
 
-      if (chart) chart.destroy();
+  if (chart) chart.destroy();
 
-      let color = '#4CAF50';
-      if (score < 80) color = '#FFA726';
-      if (score < 50) color = '#EF5350';
+  // Vælg farve baseret på score
+// Vælg farve baseret på score
+let color;
+if (score < 50) {
+  color = '#EF5350'; // Rød
+} else if (score < 80) {
+  color = '#FFA726'; // Gul
+} else {
+  color = '#4CAF50'; // Grøn
+}
 
-      const centerText = {
-        id: 'centerText',
-        beforeDraw(chart) {
-          const { width, height } = chart;
-          const ctx = chart.ctx;
-          ctx.restore();
-          const fontSize = (height / 5).toFixed(2);
-          ctx.font = `${fontSize}px Arial`;
-          ctx.textBaseline = 'middle';
-          ctx.textAlign = 'center';
-          ctx.fillStyle = '#333';
-          ctx.fillText(`${score}%`, width / 2, height / 2);
-          ctx.save();
-        }
-      };
 
-      chart = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-          datasets: [{
-            data: [score, 100 - score],
-            backgroundColor: [color, '#e0e0e0'],
-            borderWidth: 0
-          }]
-        },
-        options: {
-          cutout: '75%',
-          plugins: {
-            tooltip: { enabled: false },
-            legend: { display: false },
-            title: { display: false }
-          }
-        },
-        plugins: [centerText]
-      });
+  const centerText = {
+    id: 'centerText',
+    beforeDraw(chart) {
+      const { width, height } = chart;
+      const ctx = chart.ctx;
+      ctx.restore();
+      const fontSize = (height / 5).toFixed(2);
+      ctx.font = `${fontSize}px Arial`;
+      ctx.textBaseline = 'middle';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#333';
+      ctx.fillText(`${score}%`, width / 2, height / 2);
+      ctx.save();
     }
+  };
+
+  chart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      datasets: [{
+        data: [score, 100 - score],
+        backgroundColor: [color, '#e0e0e0'], // Lys grå som baggrund
+        borderWidth: 0
+      }]
+    },
+    options: {
+      cutout: '75%',
+      plugins: {
+        tooltip: { enabled: false },
+        legend: { display: false },
+        title: { display: false }
+      }
+    },
+    plugins: [centerText]
+  });
+}
+
   </script>
 </body>
 </html>

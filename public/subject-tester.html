@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8" />
+  <title>Subject Line Tester</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background-color: #f4f4f4;
+    }
+
+    header {
+      background-color: #49413a;
+      color: white;
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+    }
+
+    .logo img {
+      height: 40px;
+      margin-right: 1rem;
+    }
+
+    nav a {
+      color: white;
+      text-decoration: none;
+      margin-left: 1rem;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 2rem auto;
+      background: white;
+      padding: 2rem;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    textarea {
+      width: 100%;
+      height: 100px;
+      font-size: 1rem;
+      padding: 1rem;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      margin-bottom: 1rem;
+    }
+
+    button {
+      background-color: #49413a;
+      color: white;
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    #feedback {
+      margin-top: 2rem;
+    }
+
+    footer {
+      background-color: #49413a;
+      padding: 1rem;
+      text-align: center;
+      color: white;
+      margin-top: 4rem;
+    }
+  </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+          <div class="logo">
+            <img src="https://via.placeholder.com/50" alt="Logo">
+          </div>
+          <nav class="menu" id="navMenu">
+            <a href="#">Home</a>
+            <a href="#">Om os</a>
+            <a href="#">Kontakt</a>
+            <a href="index.html">DNS OVERVÅGNING</a>
+            <a href="subject-tester.html">EMNELINJE CHECK</a>
+          </nav>
+          <div class="burger" onclick="toggleMenu()">
+            ☰
+          </div>
+        </div>
+        <div class="header-text">
+          <h1>E-mail Health Checker</h1>
+          <p>Tjek dit domænes DMARC, DKIM og SPF ved at indtaste dit domæne og din DKIM selector herunder:</p>
+        </div>
+      </header>
+
+  <div class="container">
+    <h2>Test din emnelinje</h2>
+    <p>Få AI-feedback på længde, tone, emojis og åbningsrate-potentiale.</p>
+    <textarea id="subjectInput" placeholder="Indtast din emnelinje her..."></textarea>
+    <button onclick="analyzeSubject()">Analyser</button>
+
+    <div id="feedback"></div>
+  </div>
+
+  <footer>
+    <p>&copy; 2025 Subject Line Tester. Alle rettigheder forbeholdes.</p>
+  </footer>
+
+  <script>
+    function analyzeSubject() {
+      const input = document.getElementById("subjectInput").value.trim();
+      const feedback = document.getElementById("feedback");
+
+      if (!input) {
+        feedback.innerHTML = "<p style='color: red;'>Indtast venligst en emnelinje.</p>";
+        return;
+      }
+
+      // Simuleret AI-feedback (placeholder indtil AI backend kobles på)
+      const lengthScore = input.length < 30 ? '✅ God længde' : '⚠️ Overvej at forkorte den';
+      const emojiScore = /[\u{1F600}-\u{1F64F}]/u.test(input) ? '✅ Bruger emojis (fanger opmærksomhed)' : 'ℹ️ Ingen emojis';
+      const toneScore = /gratis|spar|tilbud/i.test(input) ? '⚠️ Muligvis spamagtig tone' : '✅ Neutral/professionel tone';
+
+      feedback.innerHTML = `
+        <h3>AI-feedback:</h3>
+        <ul>
+          <li><strong>Længde:</strong> ${lengthScore}</li>
+          <li><strong>Emojis:</strong> ${emojiScore}</li>
+          <li><strong>Tone:</strong> ${toneScore}</li>
+        </ul>
+        <p><em>NB: Dette er en forsimplet vurdering. En rigtig AI-model vil give mere præcis feedback.</em></p>
+      `;
+    }
+  </script>
+</body>
+</html>
